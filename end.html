@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You Failed!</title>
+    <style>
+        body {
+            background: black;
+            color: red;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: rgba(255, 0, 0, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid red;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        p {
+            font-size: 24px;
+            color: #ff6666;
+            margin: 20px 0;
+        }
+
+        .story-btn {
+            background: linear-gradient(45deg, #ff0000, #990000);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-family: monospace;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+
+        .story-btn:hover {
+            transform: scale(1.1);
+            background: linear-gradient(45deg, #990000, #ff0000);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(255, 0, 0, 0.7); }
+            50% { text-shadow: 0 0 20px rgba(255, 0, 0, 0.9), 0 0 30px rgba(255, 0, 0, 0.7); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .insult {
+            font-style: italic;
+            color: #ff9999;
+            font-size: 18px;
+            margin: 15px 0;
+            opacity: 0.8;
+        }
+
+        /* Add video overlay styles */
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            display: none;
+            z-index: 1000;
+        }
+
+        .transition-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YOU FAILED!</h1>
+        <p>Wow, you really suck at FPS games...</p>
+        <div class="insult">Maybe shooters aren't your thing? 🎯❌</div>
+        <p>Want to try something easier?</p>
+        <button class="story-btn" onclick="playTransitionAndRedirect()">
+            Play Story Mode
+        </button>
+    </div>
+
+    <!-- Add video overlay -->
+    <div class="video-overlay" id="videoOverlay">
+        <video class="transition-video" id="transitionVideo" playsinline>
+            <source src="raze.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <script>
+        function playTransitionAndRedirect() {
+            const videoOverlay = document.getElementById('videoOverlay');
+            const video = document.getElementById('transitionVideo');
+            
+            videoOverlay.style.display = 'block';
+            
+            // Add error handling
+            video.onerror = function() {
+                console.error('Error playing video:', video.error);
+                // Fallback to direct redirect if video fails
+                window.location.href = 'index.html';
+            };
+
+            // Force video play
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    console.log('Video started playing');
+                })
+                .catch(error => {
+                    console.error('Error playing video:', error);
+                    window.location.href = 'index.html';
+                });
+            }
+            
+            video.addEventListener('ended', function() {
+                window.location.href = 'main.html';
+            });
+        }
+    </script>
+</body>
+</html> 

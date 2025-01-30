@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPS Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+            text-shadow: 0 0 2px black;
+        }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+        }
+        #fps {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+        }
+        #ammo-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            font-family: monospace;
+            font-size: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #score-counter {
+            position: fixed;
+            top: 10px;
+            right: 20px;
+            color: white;
+            font-family: monospace;
+            font-size: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #taunt-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-family: monospace;
+            font-size: 24px;
+            text-shadow: 2px 2px black;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #timer {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-family: monospace;
+            font-size: 24px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #jumpscare {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: none;
+            z-index: 1000;
+        }
+        #game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-family: monospace;
+            font-size: 48px;
+            text-align: center;
+            display: none;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading...</div>
+    <div id="crosshair">+</div>
+    <div id="fps">FPS: 0</div>
+    <div id="ammo-counter">Ammo: 6/6</div>
+    <div id="score-counter">Score: 0</div>
+    <div id="taunt-message"></div>
+    <div id="timer">Time: 30</div>
+    <div id="jumpscare"></div>
+    <div id="game-over">
+        GAME OVER<br>
+        <span style="font-size: 24px">Click to continue...</span>
+    </div>
+    <audio id="flashbang" src="flashbang.mp3" preload="auto"></audio>
+    <audio id="gameOverMusic">
+        <source src="mario.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    <audio id="backgroundMusic" loop>
+        <source src="goofy.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="shootSound">
+        <source src="pew.mp3" type="audio/mpeg">
+    </audio>
+    <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/",
+                "three/loaders/": "https://unpkg.com/three@0.157.0/examples/jsm/loaders/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+        const GRAVITY = 50;
+        const MOVEMENT_SPEED = 200;
+        const JUMP_FORCE = 15;
+        const MAX_FPS = 144;
+        const FRAME_TIME = 1000 / MAX_FPS;
+        const PLAYER_HEIGHT = 2;
+        const PLAYER_RADIUS = 0.3;
+        const ISLAND_RADIUS = 50;
+        const WATER_SIZE = 200;
+        const BALLOON_COUNT = 17;
+        const BULLET_SPEED = 50;
+        const RELOAD_TIME = 1000; // 1 second
+        const MAX_AMMO = 6;
+        const TREE_TRUNK_RADIUS = 0.7;
+
+        let camera, scene, renderer, controls;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
+        let water;
+        
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        const collidableObjects = [];
+        const raycaster = new THREE.Raycaster();
+
+        let prevTime = performance.now();
+        let frameCount = 0;
+        let lastFpsUpdate = prevTime;
+
+        let balloons = [];
+        let bullets = [];
+        let ammo = MAX_AMMO;
+        let isReloading = false;
+        let lastShootTime = 0;
+        let trees = [];  // Array to store tree positions
+        let score = 0;
+        let timeRemaining = 30;
+        let gameOver = false;
+
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const shootSound = document.getElementById('shootSound');
+
+        init();
+
+        function init() {
+            const loadingElement = document.getElementById('loading');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Sky blue
+            scene.fog = new THREE.Fog(0x87CEEB, 0, 300);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, PLAYER_HEIGHT, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0x666666);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffbb, 1);
+            sunLight.position.set(10, 30, 10);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            // Original gun code
+            const gunGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.5);
+            const gunMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            const gun = new THREE.Mesh(gunGeometry, gunMaterial);
+            gun.position.set(0.2, -0.3, -0.5);
+            camera.add(gun);
+
+            createIsland();
+            createWater();
+            createTrees();
+            createBalloons();
+
+            scene.add(camera);
+
+            controls = new PointerLockControls(camera, document.body);
+
+            // Add this click event for locking controls
+            document.addEventListener('click', () => {
+                if (!controls.isLocked) {
+                    controls.lock();
+                }
+            });
+
+            // Add separate click event for shooting
+            document.addEventListener('click', () => {
+                if (controls.isLocked && !gameOver) {
+                    if (ammo > 0 && !isReloading) {
+                        const bullet = createBullet();
+                        scene.add(bullet);
+                        bullets.push(bullet);
+                        ammo--;
+                        updateAmmoDisplay();
+                        showTaunt();
+                        
+                        // Play shooting sound
+                        shootSound.currentTime = 0;
+                        shootSound.play().catch(err => console.log('Shoot sound failed:', err));
+                        
+                        if (ammo === 0) {
+                            reload();
+                        }
+                    }
+                }
+            });
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('keydown', (event) => {
+                if (event.code === 'KeyR') {
+                    reload();
+                }
+            });
+            window.addEventListener('resize', onWindowResize);
+
+            // Add this to init() function after creating controls
+            controls.addEventListener('lock', () => {
+                backgroundMusic.volume = 0.3;
+                backgroundMusic.play().catch(err => console.log('Music playback failed:', err));
+            });
+
+            controls.addEventListener('unlock', () => {
+                if (!gameOver) {
+                    backgroundMusic.pause();
+                }
+            });
+
+            loadingElement.style.display = 'none';
+            animate();
+            startTimer();
+        }
+
+        function createIsland() {
+            const geometry = new THREE.CircleGeometry(ISLAND_RADIUS, 32);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xc2b280,  // Sand color
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const island = new THREE.Mesh(geometry, material);
+            island.rotation.x = -Math.PI / 2;
+            island.receiveShadow = true;
+            scene.add(island);
+
+            const grassGeometry = new THREE.CircleGeometry(ISLAND_RADIUS - 5, 32);
+            const grassMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x355E3B,  // Forest green
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = 0.01;
+            grass.receiveShadow = true;
+            scene.add(grass);
+        }
+
+        function createWater() {
+            const waterGeometry = new THREE.PlaneGeometry(WATER_SIZE, WATER_SIZE);
+            const waterMaterial = new THREE.MeshStandardMaterial({
+                color: 0x006994,
+                transparent: true,
+                opacity: 0.8,
+                roughness: 0.1,
+                metalness: 0.8
+            });
+            water = new THREE.Mesh(waterGeometry, waterMaterial);
+            water.rotation.x = -Math.PI / 2;
+            water.position.y = -0.5;
+            scene.add(water);
+        }
+
+        function createTrees() {
+            const treeCount = 20;
+            for(let i = 0; i < treeCount; i++) {
+                const angle = (i / treeCount) * Math.PI * 2;
+                const radius = Math.random() * (ISLAND_RADIUS - 10) + 5;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+
+                const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 4, 8);
+                const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x4a2e0f });
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.set(x, 2, z);
+                trunk.castShadow = true;
+                scene.add(trunk);
+
+                const topGeometry = new THREE.ConeGeometry(2, 4, 8);
+                const topMaterial = new THREE.MeshStandardMaterial({ color: 0x0f5722 });
+                const top = new THREE.Mesh(topGeometry, topMaterial);
+                top.position.set(x, 5, z);
+                top.castShadow = true;
+                scene.add(top);
+
+                // Store tree position
+                trees.push(new THREE.Vector2(x, z));
+            }
+        }
+
+        function createBalloons() {
+            // Create balloon sphere geometry
+            const balloonGeometry = new THREE.SphereGeometry(1, 16, 16);
+            const balloonMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xff0000,
+                specular: 0x444444,
+                shininess: 30
+            });
+
+            // Create balloon tail geometry
+            const tailGeometry = new THREE.CylinderGeometry(0.1, 0.05, 1, 8);
+            const tailMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xcccccc,
+                shininess: 20
+            });
+
+            for(let i = 0; i < BALLOON_COUNT; i++) {
+                // Create balloon group to hold both sphere and tail
+                const balloonGroup = new THREE.Group();
+
+                // Create balloon sphere
+                const balloon = new THREE.Mesh(balloonGeometry, balloonMaterial);
+                balloonGroup.add(balloon);
+
+                // Create and position tail
+                const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+                tail.position.y = -1.2; // Position below the balloon sphere
+                balloonGroup.add(tail);
+
+                // Set initial position for the whole group
+                resetBalloonPosition(balloonGroup);
+                scene.add(balloonGroup);
+                balloons.push(balloonGroup);
+            }
+        }
+
+        function resetBalloonPosition(balloonGroup) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * (ISLAND_RADIUS - 15) + 5;
+            balloonGroup.position.x = Math.cos(angle) * radius;
+            balloonGroup.position.z = Math.sin(angle) * radius;
+            balloonGroup.position.y = Math.random() * 10 + 5;
+            balloonGroup.userData.velocity = new THREE.Vector3(
+                Math.random() * 2 - 1,
+                Math.random() * 0.5,
+                Math.random() * 2 - 1
+            );
+        }
+
+        function createBullet() {
+            const bulletGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+            const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+            
+            // Set bullet position to camera position
+            bullet.position.set(
+                camera.position.x,
+                camera.position.y,
+                camera.position.z
+            );
+            
+            // Get shooting direction from camera
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            
+            // Increase random spread significantly
+            direction.x += (Math.random() - 0.5) * 1.5;  // Increased from 0.2 to 1.5
+            direction.y += (Math.random() - 0.5) * 1.5;  // Increased from 0.2 to 1.5
+            direction.z += (Math.random() - 0.5) * 1.5;  // Increased from 0.2 to 1.5
+            
+            // Add random curve to bullet path
+            direction.x += Math.sin(Math.random() * Math.PI) * 0.5;
+            direction.y += Math.cos(Math.random() * Math.PI) * 0.5;
+            
+            // Add slight upward bias to make bullets go over balloons
+            direction.y += 0.3;
+            
+            direction.normalize();
+            
+            // Randomize bullet speed
+            const randomSpeed = BULLET_SPEED * (0.8 + Math.random() * 0.4);
+            bullet.userData.velocity = direction.multiplyScalar(randomSpeed);
+            
+            return bullet;
+        }
+
+        function updateBalloons(delta) {
+            balloons.forEach(balloon => {
+                balloon.position.add(balloon.userData.velocity.clone().multiplyScalar(delta));
+                
+                
+                if (balloon.position.y > 20 || balloon.position.y < 5) {
+                    balloon.userData.velocity.y *= -1;
+                }
+                
+                const distanceFromCenter = Math.sqrt(
+                    balloon.position.x * balloon.position.x + 
+                    balloon.position.z * balloon.position.z
+                );
+                
+                if (distanceFromCenter > ISLAND_RADIUS - 5) {
+                    balloon.userData.velocity.x *= -1;
+                    balloon.userData.velocity.z *= -1;
+                }
+            });
+        }
+
+        function updateBullets(delta) {
+            for(let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(delta));
+                
+                // Check for balloon hits
+                balloons.forEach(balloon => {
+                    if (bullet.position.distanceTo(balloon.position) < 1.2) {
+                        // Create popping effect
+                        const particles = [];
+                        const particleCount = 10;
+                        const particleGeometry = new THREE.SphereGeometry(0.1, 4, 4);
+                        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+                        for(let j = 0; j < particleCount; j++) {
+                            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                            particle.position.copy(balloon.position);
+                            particle.userData.velocity = new THREE.Vector3(
+                                (Math.random() - 0.5) * 10,
+                                (Math.random() - 0.5) * 10,
+                                (Math.random() - 0.5) * 10
+                            );
+                            scene.add(particle);
+                            particles.push(particle);
+
+                            // Remove particle after 1 second
+                            setTimeout(() => {
+                                scene.remove(particle);
+                                const index = particles.indexOf(particle);
+                                if (index > -1) {
+                                    particles.splice(index, 1);
+                                }
+                            }, 1000);
+                        }
+
+                        resetBalloonPosition(balloon);
+                        scene.remove(bullet);
+                        bullets.splice(i, 1);
+                    }
+                });
+                
+                if (bullet.position.length() > 100) {
+                    scene.remove(bullet);
+                    bullets.splice(i, 1);
+                    score -= 10;
+                    updateScoreDisplay();
+                }
+            }
+        }
+
+        function reload() {
+            if (!isReloading && ammo < MAX_AMMO) {
+                isReloading = true;
+                setTimeout(() => {
+                    ammo = MAX_AMMO;
+                    isReloading = false;
+                    updateAmmoDisplay();
+                }, RELOAD_TIME);
+            }
+        }
+
+        function updateAmmoDisplay() {
+            document.getElementById('ammo-counter').textContent = `Ammo: ${ammo}/${MAX_AMMO}`;
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('score-counter').textContent = `Score: ${score}`;
+        }
+
+        function showTaunt() {
+            const taunts = [
+                "Bad aim!",
+                "Can't aim to save your life!",
+                "My grandma shoots better!",
+                "Try using your eyes!",
+                "Missing is your specialty!",
+                "You couldn't hit water if you fell out of a boat!",
+                "Did you even try?",
+                "Maybe shooting isn't your thing...",
+                "Have you considered a different game?",
+                "Wow, that was nowhere close!",
+                "Are you even trying to hit anything?",
+                "My cat plays better than you!",
+                "Delete the game already!",
+                "This is painful to watch...",
+                "You're making this too easy!",
+                "Is your monitor even on?",
+                "Time to uninstall!",
+                "Even NPCs aim better!",
+                "Are you playing with your eyes closed?",
+                "This is embarrassing to watch!",
+                "You should stick to Minecraft!",
+                "Missing shots like it's your job!",
+                "Have you tried turning on your brain?",
+                "I've seen better aim in a storm trooper!",
+                "Your aim is as bad as your life choices!"
+            ];
+            
+            const tauntElement = document.getElementById('taunt-message');
+            const randomTaunt = taunts[Math.floor(Math.random() * taunts.length)];
+            const scoreComment = score <= -50 ? " Your score is pathetic!" : "";
+            
+            tauntElement.textContent = randomTaunt + scoreComment;
+            tauntElement.style.opacity = '1';
+            
+            // Make taunts stay longer on screen
+            setTimeout(() => {
+                tauntElement.style.opacity = '0';
+            }, 3000);  // Increased from 2000 to 3000ms
+        }
+
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Space': if (canJump) velocity.y += JUMP_FORCE; canJump = false; break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function checkCollisions(nextPosition) {
+            // Check island boundary only
+            const distanceFromCenter = Math.sqrt(
+                nextPosition.x * nextPosition.x + 
+                nextPosition.z * nextPosition.z
+            );
+
+            if (distanceFromCenter >= ISLAND_RADIUS - PLAYER_RADIUS) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const currentTime = performance.now();
+            const delta = (currentTime - prevTime) / 1000;
+
+            if (water) {
+                water.position.y = -0.5 + Math.sin(currentTime * 0.001) * 0.1;
+            }
+
+            if (controls.isLocked) {
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= GRAVITY * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * MOVEMENT_SPEED * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * MOVEMENT_SPEED * delta;
+
+                const nextPosition = camera.position.clone();
+                nextPosition.x -= velocity.x * delta;
+                nextPosition.z -= velocity.z * delta;
+
+                if (checkCollisions(nextPosition)) {
+                    controls.moveRight(-velocity.x * delta);
+                    controls.moveForward(-velocity.z * delta);
+                }
+
+                camera.position.y += velocity.y * delta;
+
+                if (camera.position.y < PLAYER_HEIGHT) {
+                    velocity.y = 0;
+                    camera.position.y = PLAYER_HEIGHT;
+                    canJump = true;
+                }
+            }
+
+            updateBalloons(delta);
+            updateBullets(delta);
+
+            frameCount++;
+            if (currentTime > lastFpsUpdate + 1000) {
+                document.getElementById('fps').textContent = `FPS: ${frameCount}`;
+                frameCount = 0;
+                lastFpsUpdate = currentTime;
+            }
+
+            prevTime = currentTime;
+            renderer.render(scene, camera);
+        }
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (gameOver) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                
+                timeRemaining--;
+                document.getElementById('timer').textContent = `Time: ${timeRemaining}`;
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    triggerJumpscare();
+                }
+            }, 1000);
+        }
+
+        function triggerJumpscare() {
+            gameOver = true;
+            controls.unlock();
+            
+            const jumpscareElement = document.getElementById('jumpscare');
+            const gameOverElement = document.getElementById('game-over');
+            const flashbangSound = document.getElementById('flashbang');
+            const gameOverMusic = document.getElementById('gameOverMusic');
+            
+            // Stop background music
+            backgroundMusic.pause();
+            
+            jumpscareElement.style.display = 'block';
+            flashbangSound.play();
+            
+            setTimeout(() => {
+                gameOverElement.style.display = 'block';
+                gameOverMusic.play();
+                document.addEventListener('click', () => {
+                    gameOverMusic.pause();
+                    window.location.href = 'end.html';
+                }, { once: true });
+            }, 500);
+        }
+    </script>
+</body>
+</html>

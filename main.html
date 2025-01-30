@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Choice</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+            z-index: 10;
+        }
+
+        .ball {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            animation: bounce 3s infinite, colorChange 5s infinite;
+        }
+
+        @keyframes bounce {
+            0% {
+                transform: translate(0, 0);
+                animation-timing-function: ease-out;
+            }
+            25% {
+                transform: translate(calc(100vw - 50px), calc(100vh - 50px));
+                animation-timing-function: ease-in;
+            }
+            50% {
+                transform: translate(0, calc(100vh - 50px));
+                animation-timing-function: ease-out;
+            }
+            75% {
+                transform: translate(calc(100vw - 50px), 0);
+                animation-timing-function: ease-in;
+            }
+            100% {
+                transform: translate(0, 0);
+                animation-timing-function: ease-out;
+            }
+        }
+
+        @keyframes colorChange {
+            0% { background: #ff4081; }
+            25% { background: #7c4dff; }
+            50% { background: #00e676; }
+            75% { background: #ffeb3b; }
+            100% { background: #ff4081; }
+        }
+
+        /* Update ball positions with slower speeds */
+        .ball:nth-child(1) { left: 5%; top: 10%; animation-duration: 3s; animation-delay: 0s; }
+        .ball:nth-child(2) { left: 15%; top: 20%; animation-duration: 3.5s; animation-delay: 0.2s; }
+        .ball:nth-child(3) { left: 25%; top: 15%; animation-duration: 2.8s; animation-delay: 0.4s; }
+        .ball:nth-child(4) { left: 35%; top: 25%; animation-duration: 3.2s; animation-delay: 0.6s; }
+        .ball:nth-child(5) { left: 45%; top: 30%; animation-duration: 3.3s; animation-delay: 0.8s; }
+        .ball:nth-child(6) { left: 55%; top: 10%; animation-duration: 2.9s; animation-delay: 1s; }
+        .ball:nth-child(7) { left: 65%; top: 20%; animation-duration: 3.4s; animation-delay: 1.2s; }
+        .ball:nth-child(8) { left: 75%; top: 15%; animation-duration: 3.1s; animation-delay: 1.4s; }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .yes-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .no-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .message {
+            font-size: 24px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .play-btn {
+            background-color: #2196F3;
+            color: white;
+            margin-top: 20px;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            display: none;
+            z-index: 1000;
+        }
+
+        .transition-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background balls -->
+    <div class="ball"></div>
+    <div class="ball"></div>
+    <div class="ball"></div>
+    <div class="ball"></div>
+    <div class="ball"></div>
+    <div class="ball"></div>
+    <div class="ball"></div>
+    <div class="ball"></div>
+
+    <div class="container">
+        <div class="buttons-container">
+            <h2>Do you need some music?</h2>
+            <button class="yes-btn" onclick="playMusic()">Hell Yeah!</button>
+            <button class="no-btn" onclick="noChoice()">Nawrr</button>
+        </div>
+    </div>
+
+    <div class="message" id="partyMessage">
+        Let's get this party started! 🎵🎉
+        <br><br>
+        <button class="play-btn" onclick="playTransitionAndRedirect()">Play Game</button>
+    </div>
+
+    <div class="message" id="forceMessage">
+        You don't have a choice! Time to party! 🎵😎
+    </div>
+
+    <audio id="music" loop>
+        <source src="song.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div class="video-overlay" id="videoOverlay">
+        <video class="transition-video" id="transitionVideo" playsinline>
+            <source src="raze.mp4" type="video/quicktime">
+            <source src="raze.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <script>
+        function playTransitionAndRedirect() {
+            const videoOverlay = document.getElementById('videoOverlay');
+            const video = document.getElementById('transitionVideo');
+            
+            videoOverlay.style.display = 'block';
+            
+            // Add error handling
+            video.onerror = function() {
+                console.error('Error playing video:', video.error);
+                // Fallback to direct redirect if video fails
+                window.location.href = 'game.html';
+            };
+
+            // Force video play
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    // Video playback started
+                    console.log('Video started playing');
+                })
+                .catch(error => {
+                    console.error('Error playing video:', error);
+                    // Fallback to direct redirect
+                    window.location.href = 'game.html';
+                });
+            }
+            
+            video.addEventListener('ended', function() {
+                window.location.href = 'game.html';
+            });
+        }
+
+        function playMusic() {
+            const buttonsContainer = document.querySelector('.buttons-container');
+            const partyMessage = document.getElementById('partyMessage');
+            const music = document.getElementById('music');
+            
+            buttonsContainer.style.display = 'none';
+            partyMessage.style.display = 'block';
+            partyMessage.style.opacity = '1';
+            music.play();
+        }
+
+        function noChoice() {
+            const buttonsContainer = document.querySelector('.buttons-container');
+            const forceMessage = document.getElementById('forceMessage');
+            const partyMessage = document.getElementById('partyMessage');
+            const music = document.getElementById('music');
+            
+            buttonsContainer.style.display = 'none';
+            forceMessage.style.display = 'block';
+            forceMessage.style.opacity = '1';
+            
+            setTimeout(() => {
+                forceMessage.style.opacity = '0';
+                setTimeout(() => {
+                    forceMessage.style.display = 'none';
+                    partyMessage.style.display = 'block';
+                    partyMessage.style.opacity = '1';
+                }, 500);
+            }, 2000);
+            music.play();
+        }
+    </script>
+</body>
+</html>

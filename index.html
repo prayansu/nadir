@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .scene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: opacity 1s;
+        }
+
+        /* Scene Backgrounds */
+        .darkroom {
+            background-color: black;
+            z-index: 5;
+        }
+
+        .empty-room {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                        url('https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-size: cover;
+            background-position: center;
+            z-index: 4;
+        }
+
+        .hallway {
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
+                        url('https://images.pexels.com/photos/5662857/pexels-photo-5662857.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-size: cover;
+            background-position: center;
+            z-index: 3;
+        }
+
+        .giftroom {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                        url('https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-size: cover;
+            background-position: center;
+            z-index: 2;
+        }
+
+        .card-room {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                        url('https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-size: cover;
+            background-position: center;
+            z-index: 1;
+        }
+
+        /* Messages */
+        .message {
+            font-size: 2.5rem;
+            margin: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Button */
+        .button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            background: #ff69b4;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            margin-top: 20px;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.3s;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .button:hover {
+            transform: scale(1.1);
+            background: #ff1493;
+        }
+
+        .button.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Final Card */
+        .final-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            color: #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+        }
+
+        .profile-pic {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin-bottom: 20px;
+            border: 5px solid #ff69b4;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .final-card h1 {
+            color: #ff69b4;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .final-card p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .author-name {
+            font-size: 1.4rem;
+            color: #666;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        .message-text {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .next-button {
+            margin-top: 30px;
+            background: #4CAF50;
+        }
+
+        .next-button:hover {
+            background: #45a049;
+        }
+
+        .final-card {
+            text-align: center;
+        }
+
+        .style1 {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 192, 203, 0.95));
+        }
+
+        .style2 {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(173, 216, 230, 0.95));
+        }
+
+        .style3 {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(144, 238, 144, 0.95));
+        }
+
+        .style4 {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 223, 186, 0.95));
+        }
+
+        .next-card-button {
+            background: #9c27b0;
+        }
+
+        .next-card-button:hover {
+            background: #7b1fa2;
+        }
+    </style>
+</head>
+<body>
+    <audio id="bgMusic" loop preload="auto">
+        <source src="song.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="darkroom" class="scene darkroom">
+        <p class="message">Hey!</p>
+        <p class="message">Why is it so dark here?</p>
+        <p class="message">Can you please turn on the lights?</p>
+        <button class="button">💡 Turn On Lights</button>
+    </div>
+
+    <div id="emptyRoom" class="scene empty-room hidden">
+        <p class="message">Oh! Why is it so empty here?</p>
+        <p class="message">Let's check outside...</p>
+        <button class="button">🚪 Open Door</button>
+    </div>
+
+    <div id="hallway" class="scene hallway hidden">
+        <p class="message">This hallway seems a bit spooky...</p>
+        <p class="message">Maybe we should go back inside?</p>
+        <button class="button">🚪 Go Back</button>
+    </div>
+
+    <div id="giftroom" class="scene giftroom hidden">
+        <p class="message">Look! There's something special for you!</p>
+        <p class="message">Should we see what it is?</p>
+        <button class="button">🎁 Open Gift</button>
+    </div>
+
+    <div id="cardRoom1" class="scene card-room hidden">
+        <div class="final-card style1">
+            <img id="profilePic1" class="profile-pic floating" src="" alt="Wisher">
+            <h1>Happy Birthday :3 <span id="name1">!</span></h1>
+            <p id="message1" class="message-text"></p>
+            <p class="author-name">- <span id="author1"></span></p>
+            <button class="button next-card-button">Next Card ➡️</button>
+        </div>
+    </div>
+
+    <div id="cardRoom2" class="scene card-room hidden">
+        <div class="final-card style2">
+            <img id="profilePic2" class="profile-pic floating" src="" alt="Wisher">
+            <h1>Happy Birthday <span id="name2">!</span></h1>
+            <p id="message2" class="message-text"></p>
+            <p class="author-name">- <span id="author2"></span></p>
+            <button class="button next-card-button">Next Card ➡️</button>
+        </div>
+    </div>
+
+    <div id="cardRoom3" class="scene card-room hidden">
+        <div class="final-card style3">
+            <img id="profilePic3" class="profile-pic floating" src="" alt="Wisher">
+            <h1>Happy Birthday <span id="name3">!</span></h1>
+            <p id="message3" class="message-text"></p>
+            <p class="author-name">- <span id="author3"></span></p>
+            <button class="button next-card-button">Next Card ➡️</button>
+        </div>
+    </div>
+
+    <div id="cardRoom4" class="scene card-room hidden">
+        <div class="final-card style4">
+            <img id="profilePic4" class="profile-pic floating" src="" alt="Wisher">
+            <h1>Happy Birthday <span id="name4">!</span></h1>
+            <p id="message4" class="message-text"></p>
+            <p class="author-name">- <span id="author4"></span></p>
+            <button class="button next-card-button" style="display: none;">Next Card ➡️</button>
+        </div>
+    </div>
+
+    <script>
+        let currentScene = "darkroom";
+        const bgMusic = document.getElementById('bgMusic');
+        let musicStarted = false;
+
+        function transition(fromScene, toScene) {
+            document.getElementById(fromScene).classList.add('hidden');
+            document.getElementById(toScene).classList.remove('hidden');
+            currentScene = toScene;
+            showMessages(toScene);
+        }
+
+        const scenes = ["darkroom", "emptyRoom", "hallway", "giftroom", "cardRoom1", "cardRoom2", "cardRoom3", "cardRoom4"];
+
+        const CONFIG = {
+            name: "Nadir",
+            cards: [
+                {
+                    author: "Nitya",
+                    message: "Are you a squirrel? Because I'm nuts about you & rememeber IF I WAS A CAT ID SPEND ALL MY 9 LIVES W U",
+                    pictureUrl: "assets/1.webp",
+                    background: "bg1.webp"
+                },
+                {
+                    author: "Kin",
+                    message: "happy birthday!! take care and study well and stay hydrated, tingu!! (im taller than u)",
+                    pictureUrl: "assets/2.webp",
+                    background: "bg2.webp"
+                },
+                {
+                    author: "Shu",
+                    message: "Happy Birthday! keep clutching  , helps me get my kids all ova the screen",
+                    pictureUrl: "assets/3.webp",
+                    background: "bg3.webp"
+                },
+                {
+                    author: "Aaron",
+                    message: "dear nadir, happy birthday you whitewashed ass,one of the best online friends ive met ,hardstuck asc ahh,cant pull ahh,type shit saaahhhh ur gang twin i fw u heavy",
+                    pictureUrl: "assets/4.webp",
+                    background: "bg4.webp"
+                }
+            ]
+        };
+
+        function showCard(cardIndex) {
+            const card = CONFIG.cards[cardIndex - 1];
+            document.getElementById(`profilePic${cardIndex}`).src = card.pictureUrl;
+            document.getElementById(`message${cardIndex}`).textContent = card.message;
+            document.getElementById(`author${cardIndex}`).textContent = card.author;
+            document.getElementById(`name${cardIndex}`).textContent = CONFIG.name;
+        }
+
+        function showMessages(sceneId) {
+            const messages = document.querySelectorAll(`#${sceneId} .message`);
+            const button = document.querySelector(`#${sceneId} .button`);
+            
+            messages.forEach((msg, index) => {
+                setTimeout(() => {
+                    msg.classList.add('show');
+                    if (index === messages.length - 1) {
+                        setTimeout(() => button?.classList.add('show'), 1000);
+                    }
+                }, index * 1500);
+            });
+
+            if (sceneId.startsWith('cardRoom')) {
+                const cardNumber = parseInt(sceneId.replace('cardRoom', ''));
+                showCard(cardNumber);
+            }
+        }
+
+        showMessages('darkroom');
+
+        document.querySelectorAll('.button').forEach(button => {
+            button.addEventListener('click', () => {
+                if (currentScene === 'darkroom' && !musicStarted) {
+                    bgMusic.play().catch(err => console.log('Music playback failed:', err));
+                    musicStarted = true;
+                }
+
+                const currentIndex = scenes.indexOf(currentScene);
+                if (currentIndex < scenes.length - 1) {
+                    transition(currentScene, scenes[currentIndex + 1]);
+                }
+            });
+        });
+
+        function playTransitionAndRedirect() {
+            // ...
+            video.addEventListener('ended', function() {
+                window.location.href = 'game.html';
+            });
+            // ...
+        }
+    </script>
+</body>
+</html> 
